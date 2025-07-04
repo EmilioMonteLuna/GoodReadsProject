@@ -25,12 +25,19 @@ st.set_page_config(
 # ===============================================================================
 
 @st.cache_data(ttl=3600)
-def load_data():
-    """Load the Goodreads datasets with caching for better performance."""
+def load_works_data():
+    """Load only the works dataset for faster startup."""
     try:
-        # Load works dataset (local file)
         works = pd.read_csv('Data/goodreads_works.csv', low_memory=False)
+        return works
+    except Exception as e:
+        st.error(f"❌ Error loading works data: {e}")
+        st.stop()
 
+@st.cache_data(ttl=3600)
+def load_reviews_data():
+    """Load the reviews dataset separately when needed."""
+    try:
         # Download and load reviews dataset from Google Drive
         REVIEWS_PATH = "Data/goodreads_reviews.csv"
         FILE_ID = "1zN4p_M2hW_BQICvRXlubLoroU4VL50U5"
@@ -73,11 +80,13 @@ def load_data():
             except Exception as e:
                 st.error(f"❌ Failed to download reviews file: {e}")
                 st.error("Please manually download the file from Google Drive and place it in the Data folder.")
-                st.stop()
+                return None
 
-        # Load reviews dataset with validation
+        # Load reviews dataset with validation and memory optimization
         try:
-            reviews = pd.read_csv(REVIEWS_PATH, low_memory=False)
+            # Only load essential columns to reduce memory usage
+            essential_columns = ['work_id', 'rating', 'review_text', 'n_votes']
+            reviews = pd.read_csv(REVIEWS_PATH, low_memory=False, usecols=essential_columns)
 
             # Validate that we have the required columns
             required_columns = ['work_id', 'rating', 'review_text']
@@ -89,30 +98,36 @@ def load_data():
                 # Delete the corrupted file
                 if os.path.exists(REVIEWS_PATH):
                     os.remove(REVIEWS_PATH)
-                st.stop()
+                return None
+
+            return reviews
 
         except pd.errors.EmptyDataError:
             st.error("❌ The reviews file appears to be empty or corrupted.")
             st.error("Please delete the file and try downloading again.")
             if os.path.exists(REVIEWS_PATH):
                 os.remove(REVIEWS_PATH)
-            st.stop()
+            return None
         except Exception as e:
             st.error(f"❌ Error reading reviews file: {e}")
             st.error("The file may be corrupted. Please delete it and try again.")
             if os.path.exists(REVIEWS_PATH):
                 os.remove(REVIEWS_PATH)
-            st.stop()
+            return None
 
-        return works, reviews
     except Exception as e:
-        st.error(f"❌ Error loading data: {e}")
-        st.stop()
+        st.error(f"❌ Error loading reviews data: {e}")
+        return None
 
+# Load only works data initially for faster startup
 with st.spinner("📚 Loading book data..."):
-    works_df, reviews_df = load_data()
+    works_df = load_works_data()
 
-st.sidebar.success("✅ Data loaded successfully!")
+# Initialize reviews_df as None - will be loaded when needed
+if 'reviews_df' not in st.session_state:
+    st.session_state.reviews_df = None
+
+st.sidebar.success("✅ Basic data loaded successfully!")
 
 # ===============================================================================
 # HELPER FUNCTIONS
@@ -221,13 +236,33 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.metric("📖 Total Books", f"{len(works_df):,}")
 with col2:
-    st.metric("📝 Total Reviews", f"{len(reviews_df):,}")
+    # Show reviews count only if loaded
+    if st.session_state.reviews_df is not None:
+        st.metric("📝 Total Reviews", f"{len(st.session_state.reviews_df):,}")
+    else:
+        st.metric("📝 Reviews", "Load below ⬇️")
 with col3:
     avg_rating = works_df['avg_rating'].mean()
     st.metric("⭐ Avg Rating", f"{avg_rating:.2f}")
 with col4:
     unique_authors = works_df['author'].nunique()
     st.metric("✍️ Authors", f"{unique_authors:,}")
+
+# Reviews loading section
+st.markdown("### 📝 **Reviews Data**")
+if st.session_state.reviews_df is None:
+    st.info("📋 **Reviews not loaded yet.** Click below to load review data for enhanced recommendations!")
+    if st.button("📥 **Load Reviews Data**", type="primary"):
+        with st.spinner("📥 Loading reviews data... This may take a moment..."):
+            st.session_state.reviews_df = load_reviews_data()
+            if st.session_state.reviews_df is not None:
+                st.success("✅ Reviews loaded successfully!")
+                st.rerun()
+else:
+    st.success(f"✅ Reviews loaded! ({len(st.session_state.reviews_df):,} reviews available)")
+    if st.button("🗑️ Clear Reviews Data"):
+        st.session_state.reviews_df = None
+        st.rerun()
 
 st.markdown("---")
 
@@ -522,27 +557,30 @@ else:
             else:
                 st.markdown("**📝 Description:** *No description available*")
 
-        # Reviews section
-        st.markdown("#### 💬 **Reader Reviews**")
-        
-        book_reviews = reviews_df[reviews_df['work_id'] == row['work_id']]
-        
-        if exclude_spoilers:
-            book_reviews = filter_reviews_no_spoilers(book_reviews)
-        
-        if book_reviews.empty:
-            st.info("📝 *No reviews available for this book.*")
+        # Reviews section - only if reviews are loaded
+        if st.session_state.reviews_df is not None:
+            st.markdown("#### 💬 **Reader Reviews**")
+
+            book_reviews = st.session_state.reviews_df[st.session_state.reviews_df['work_id'] == row['work_id']]
+
+            if exclude_spoilers:
+                book_reviews = filter_reviews_no_spoilers(book_reviews)
+
+            if book_reviews.empty:
+                st.info("📝 *No reviews available for this book.*")
+            else:
+                review_count = min(2, len(book_reviews))
+                st.markdown(f"*Showing {review_count} of {len(book_reviews)} reviews:*")
+
+                for _, review in book_reviews.sample(review_count).iterrows():
+                    if filter_prof:
+                        clean_review = review.copy()
+                        clean_review['review_text'] = filter_profanity(review['review_text'])
+                        display_review(clean_review)
+                    else:
+                        display_review(review)
         else:
-            review_count = min(2, len(book_reviews))
-            st.markdown(f"*Showing {review_count} of {len(book_reviews)} reviews:*")
-            
-            for _, review in book_reviews.sample(review_count).iterrows():
-                if filter_prof:
-                    clean_review = review.copy()
-                    clean_review['review_text'] = filter_profanity(review['review_text'])
-                    display_review(clean_review)
-                else:
-                    display_review(review)
+            st.info("📝 *Load reviews data above to see reader reviews for this book.*")
 
         # Similar books
         display_similar_books(row, works_df)
