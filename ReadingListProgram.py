@@ -36,87 +36,25 @@ def load_works_data():
 
 @st.cache_data(ttl=3600)
 def load_reviews_data():
-    """Load the reviews dataset separately when needed."""
+    """Load a small sample of the reviews dataset for Streamlit Cloud."""
+    SAMPLE_PATH = "Data/goodreads_reviews_sample.csv"
+    if not os.path.exists(SAMPLE_PATH):
+        st.error(
+            "❌ Sample reviews file not found. Please upload 'goodreads_reviews_sample.csv' (e.g., 5,000 rows) to the Data folder. "
+            "See deployment instructions."
+        )
+        return None
     try:
-        # Download and load reviews dataset from Google Drive
-        REVIEWS_PATH = "Data/goodreads_reviews.csv"
-        FILE_ID = "1zN4p_M2hW_BQICvRXlubLoroU4VL50U5"
-        # Use the direct download URL that bypasses virus warning
-        URL = f"https://drive.usercontent.google.com/download?id={FILE_ID}&export=download&confirm=t"
-
-        # Create Data folder if it doesn't exist
-        os.makedirs("Data", exist_ok=True)
-
-        # Download if file doesn't exist or if it's the HTML error page
-        if not os.path.exists(REVIEWS_PATH) or os.path.getsize(REVIEWS_PATH) < 1000000:  # Less than 1MB likely means HTML error
-            st.info("📥 Downloading reviews dataset from Google Drive... This may take a few minutes due to the large file size (1.3GB)")
-            progress_bar = st.progress(0)
-            try:
-                # Add headers to mimic browser request
-                import urllib.request
-                req = urllib.request.Request(URL, headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                })
-
-                with urllib.request.urlopen(req) as response:
-                    with open(REVIEWS_PATH, 'wb') as f:
-                        # Download in chunks to show progress
-                        total_size = int(response.headers.get('Content-Length', 0))
-                        downloaded = 0
-                        chunk_size = 8192
-
-                        while True:
-                            chunk = response.read(chunk_size)
-                            if not chunk:
-                                break
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if total_size > 0:
-                                progress = int((downloaded / total_size) * 100)
-                                progress_bar.progress(progress)
-
-                progress_bar.progress(100)
-                st.success("✅ Download complete!")
-            except Exception as e:
-                st.error(f"❌ Failed to download reviews file: {e}")
-                st.error("Please manually download the file from Google Drive and place it in the Data folder.")
-                return None
-
-        # Load reviews dataset with validation and memory optimization
-        try:
-            # Only load essential columns to reduce memory usage
-            essential_columns = ['work_id', 'rating', 'review_text', 'n_votes']
-            reviews = pd.read_csv(REVIEWS_PATH, low_memory=False, usecols=essential_columns)
-
-            # Validate that we have the required columns
-            required_columns = ['work_id', 'rating', 'review_text']
-            missing_columns = [col for col in required_columns if col not in reviews.columns]
-
-            if missing_columns:
-                st.error(f"❌ Reviews file is missing required columns: {missing_columns}")
-                st.error("The downloaded file may be corrupted. Please delete it and try again.")
-                # Delete the corrupted file
-                if os.path.exists(REVIEWS_PATH):
-                    os.remove(REVIEWS_PATH)
-                return None
-
-            return reviews
-
-        except pd.errors.EmptyDataError:
-            st.error("❌ The reviews file appears to be empty or corrupted.")
-            st.error("Please delete the file and try downloading again.")
-            if os.path.exists(REVIEWS_PATH):
-                os.remove(REVIEWS_PATH)
+        essential_columns = ['work_id', 'rating', 'review_text', 'n_votes']
+        reviews = pd.read_csv(SAMPLE_PATH, low_memory=False, usecols=essential_columns)
+        required_columns = ['work_id', 'rating', 'review_text']
+        missing_columns = [col for col in required_columns if col not in reviews.columns]
+        if missing_columns:
+            st.error(f"❌ Sample reviews file is missing columns: {missing_columns}")
             return None
-        except Exception as e:
-            st.error(f"❌ Error reading reviews file: {e}")
-            st.error("The file may be corrupted. Please delete it and try again.")
-            if os.path.exists(REVIEWS_PATH):
-                os.remove(REVIEWS_PATH)
-            return None
-
+        return reviews
     except Exception as e:
-        st.error(f"❌ Error loading reviews data: {e}")
+        st.error(f"❌ Error loading sample reviews: {e}")
         return None
 
 # Load only works data initially for faster startup
