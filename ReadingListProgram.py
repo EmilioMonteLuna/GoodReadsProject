@@ -512,6 +512,8 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #8B5C2A; font-style: italic;'>
     📚 Created for the Maven Bookshelf Challenge 2025 | Data from Goodreads<br>
-    <small>Discover your next favourite book with BookVoyage</small>
+    <small>Discover your next favourite book with BookVoyage</small><br>
+    <small>Created by <a href="https://github.com/EmilioMonteLuna" target="_blank">GitHub</a> | 
+    <a href="https://www.linkedin.com/in/emilio-montelongo-luna/" target="_blank">LinkedIn</a></small>
 </div>
 """, unsafe_allow_html=True)
