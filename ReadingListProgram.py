@@ -188,6 +188,10 @@ with col4:
 
 # Reviews loading section
 st.markdown("### 📝 **Reviews Data**")
+st.info(
+    "⚠️ **Note:** For performance and deployment reasons, only a random sample of 5,000 reviews is used in this demo app. "
+    "The full dataset contains over 1 million reviews. All analysis and recommendations here are based on this sample."
+)
 if st.session_state.reviews_df is None:
     st.info("📋 **Reviews not loaded yet.** Click below to load review data for enhanced recommendations!")
     if st.button("📥 **Load Reviews Data**", type="primary"):
