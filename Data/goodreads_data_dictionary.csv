@@ -1,3 +1,31 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5940a17ca3194be094fb28656c6067c41d3b765535697d514c1a4cdde0ffa900
-size 2533
+﻿Table,Field,Description
+works,work_id,Unique identifier for the book (work) in the dataset.
+works,isbn,"The 10-digit International Standard Book Number associated with the work, if available."
+works,isbn13,"The 13-digit International Standard Book Number associated with the work, if available."
+works,original_title,"The original title of the book, in its original language."
+works,author,Name of the book’s primary author.
+works,original_publication_year,Year the work was first published.
+works,num_pages,Total number of pages in the work’s primary edition.
+works,description,"Summary or synopsis of the book, typically from Goodreads or the publisher."
+works,genres,"Comma-separated list of genres associated with the work (e.g., ""fiction, romance, thriller"")."
+works,image_url,URL link to the book’s cover image.
+works,reviews_count,"Total number of reviews for the work, based on Goodreads metadata."
+works,text_reviews_count,"Number of written (text) reviews for the work, based on Goodreads metadata."
+works,5_star_ratings,Number of 5-star ratings the work has received.
+works,4_star_ratings,Number of 4-star ratings the work has received.
+works,3_star_ratings,Number of 3-star ratings the work has received.
+works,2_star_ratings,Number of 2-star ratings the work has received.
+works,1_star_ratings,Number of 1-star ratings the work has received.
+works,ratings_count,Total number of ratings the work has received across all star levels.
+works,avg_rating,"Average rating for the work, typically a float value between 1 and 5."
+works,similar_books,"Comma-separated list of work IDs for books that are marked as similar to this one (e.g., ""12345, 67890"")."
+reviews,review_id,Unique identifier for each review.
+reviews,user_id,Unique identifier for the user who submitted the review.
+reviews,work_id,ID of the book (work) being reviewed (foreign key to works).
+reviews,started_at,Date the user marked as when they started reading the book (if available).
+reviews,read_at,Date the user marked as when they finished reading the book (if available).
+reviews,date_added,Date the review was added to Goodreads.
+reviews,rating,Number of stars (1–5) given in the review.
+reviews,review_text,"Full text of the user’s written review, where spoiler contents are surrounded by '(view spoiler)[' and '(hide spoiler)]'"
+reviews,n_votes,"Number of ""helpful"" or ""likes"" votes the review has received from other users."
+reviews,n_comments,Number of comments left by other users on the review.
