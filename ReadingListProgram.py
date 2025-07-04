@@ -9,6 +9,7 @@ import streamlit as st
 import re
 import os
 import urllib.request
+import sys
 
 # ===============================================================================
 # CONFIGURATION
@@ -35,26 +36,33 @@ def load_works_data():
         st.stop()
 
 @st.cache_data(ttl=3600)
-def load_reviews_data():
-    """Load a small sample of the reviews dataset for Streamlit Cloud."""
-    SAMPLE_PATH = "Data/goodreads_reviews_sample.csv"
-    if not os.path.exists(SAMPLE_PATH):
-        st.error(
-            "❌ Sample reviews file not found. Please upload 'goodreads_reviews_sample.csv' (e.g., 5,000 rows) to the Data folder. "
-            "See deployment instructions."
-        )
-        return None
+def load_reviews_data(use_full=False):
+    """Load a sample or the full reviews dataset."""
+    if use_full:
+        FULL_PATH = "Data/goodreads_reviews.csv"
+        if not os.path.exists(FULL_PATH):
+            st.error("❌ Full reviews file not found. Please upload 'goodreads_reviews.csv' to the Data folder.")
+            return None
+        st.warning("⚠️ Loading the full reviews dataset may crash your browser or app if you do not have enough memory (1.3GB+ file). Proceed with caution!")
+        path = FULL_PATH
+    else:
+        SAMPLE_PATH = "Data/goodreads_reviews_sample.csv"
+        if not os.path.exists(SAMPLE_PATH):
+            st.error("❌ Sample reviews file not found. Please upload 'goodreads_reviews_sample.csv' to the Data folder.")
+            return None
+        path = SAMPLE_PATH
+
     try:
         essential_columns = ['work_id', 'rating', 'review_text', 'n_votes']
-        reviews = pd.read_csv(SAMPLE_PATH, low_memory=False, usecols=essential_columns)
+        reviews = pd.read_csv(path, low_memory=False, usecols=essential_columns)
         required_columns = ['work_id', 'rating', 'review_text']
         missing_columns = [col for col in required_columns if col not in reviews.columns]
         if missing_columns:
-            st.error(f"❌ Sample reviews file is missing columns: {missing_columns}")
+            st.error(f"❌ Reviews file is missing columns: {missing_columns}")
             return None
         return reviews
     except Exception as e:
-        st.error(f"❌ Error loading sample reviews: {e}")
+        st.error(f"❌ Error loading reviews: {e}")
         return None
 
 # Load only works data initially for faster startup
@@ -157,6 +165,10 @@ def safe_get_min_max(series, default_min, default_max):
     except:
         return default_min, default_max
 
+def is_streamlit_cloud():
+    """Detect if running on Streamlit Cloud."""
+    return os.environ.get("STREAMLIT_SERVER_HEADLESS") == "1"
+
 # ===============================================================================
 # APP HEADER
 # ===============================================================================
@@ -189,19 +201,37 @@ with col4:
 # Reviews loading section
 st.markdown("### 📝 **Reviews Data**")
 st.info(
-    "⚠️ **Note:** For performance and deployment reasons, only a random sample of 5,000 reviews is used in this demo app. "
-    "The full dataset contains over 1 million reviews. All analysis and recommendations here are based on this sample.\n\n"
-    "💡 **Tip:** If you want to use the full dataset, download `goodreads_reviews.csv` and run this app locally on your own computer (with enough memory). "
-    "Update the code in `load_reviews_data()` to load the full file instead of the sample."
+    "⚠️ **Note:** This app uses a random sample of 5,000 reviews for speed and reliability. "
+    "The full dataset has over 1 million reviews, but loading it requires a powerful computer and technical steps. "
+    "If you're not sure how to do this, just use the app as-is—it's designed for everyone to enjoy book recommendations without any setup! "
+    "\n\n"
+    "💡 **Advanced users:** To use the full dataset, download `goodreads_reviews.csv` and run this app locally with enough memory. "
+    "See the project README for instructions."
 )
+
+# Sidebar toggle for advanced users
+st.sidebar.markdown("---")
+cloud_env = is_streamlit_cloud()
+if cloud_env:
+    st.sidebar.warning("⚠️ Full reviews dataset is disabled on Streamlit Cloud due to memory limits.")
+use_full_reviews = st.sidebar.checkbox(
+    "⚠️ Use full reviews dataset (advanced, local only!)",
+    value=False,
+    help="Loads all 1M+ reviews. Only use if running locally with >4GB RAM. May crash Streamlit Cloud!",
+    disabled=cloud_env
+)
+
 if st.session_state.reviews_df is None:
     st.info("📋 **Reviews not loaded yet.** Click below to load review data for enhanced recommendations!")
     if st.button("📥 **Load Reviews Data**", type="primary"):
-        with st.spinner("📥 Loading reviews data... This may take a moment..."):
-            st.session_state.reviews_df = load_reviews_data()
-            if st.session_state.reviews_df is not None:
-                st.success("✅ Reviews loaded successfully!")
-                st.rerun()
+        if use_full_reviews and cloud_env:
+            st.error("❌ Loading the full dataset is disabled on Streamlit Cloud. Please run locally for this feature.")
+        else:
+            with st.spinner("📥 Loading reviews data... This may take a moment..."):
+                st.session_state.reviews_df = load_reviews_data(use_full=use_full_reviews)
+                if st.session_state.reviews_df is not None:
+                    st.success("✅ Reviews loaded successfully!")
+                    st.rerun()
 else:
     st.success(f"✅ Reviews loaded! ({len(st.session_state.reviews_df):,} reviews available)")
     if st.button("🗑️ Clear Reviews Data"):
