@@ -252,7 +252,7 @@ num_books = st.sidebar.slider(
     "Number of recommendations:",
     min_value=1,
     max_value=20,
-    value=5,
+    value=10,  # Changed from 5 to 10
     help="How many book recommendations to display"
 )
 
@@ -571,7 +571,7 @@ st.markdown("""
 <div style='text-align: center; color: #8B5C2A; font-style: italic;'>
     📚 Created for the Maven Bookshelf Challenge 2025 | Data from Goodreads<br>
     <small>Discover your next favourite book with BookVoyage</small><br>
-    <small>Created by <a href="https://github.com/EmilioMonteLuna" target="_blank">GitHub</a> | 
+    <small>Created by <a href="https://github.com/EmilioMonteLuna" target="_blank">GitHub</a> |
     <a href="https://www.linkedin.com/in/emilio-montelongo-luna/" target="_blank">LinkedIn</a></small>
 </div>
 """, unsafe_allow_html=True)
