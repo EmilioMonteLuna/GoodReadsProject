@@ -190,7 +190,9 @@ with col4:
 st.markdown("### 📝 **Reviews Data**")
 st.info(
     "⚠️ **Note:** For performance and deployment reasons, only a random sample of 5,000 reviews is used in this demo app. "
-    "The full dataset contains over 1 million reviews. All analysis and recommendations here are based on this sample."
+    "The full dataset contains over 1 million reviews. All analysis and recommendations here are based on this sample.\n\n"
+    "💡 **Tip:** If you want to use the full dataset, download `goodreads_reviews.csv` and run this app locally on your own computer (with enough memory). "
+    "Update the code in `load_reviews_data()` to load the full file instead of the sample."
 )
 if st.session_state.reviews_df is None:
     st.info("📋 **Reviews not loaded yet.** Click below to load review data for enhanced recommendations!")
