@@ -318,17 +318,22 @@ st.sidebar.markdown("---")
 # Publication Year Filters
 st.sidebar.markdown("### 📅 **Publication Era**")
 
-# Use actual min/max from data, ignoring NaNs
-min_year_data, max_year_data = safe_get_min_max(works_df['original_publication_year'], 1000, 2023)
-min_year = min_year_data
-max_year = max_year_data
+# Ignore nulls and negative years for the slider minimum
+all_years = works_df['original_publication_year'].dropna().astype(int)
+positive_years = all_years[all_years > 0]
+if not positive_years.empty:
+    min_year_slider = int(positive_years.min())
+else:
+    min_year_slider = 1000  # fallback if no positive years
+max_year = int(all_years.max())
 
 col1, col2, col3 = st.sidebar.columns(3)
 era_selected = False
-year_range = (min_year, max_year)
+year_range = (min_year_slider, max_year)
 
 if col1.button("🏛️ Ancient\n(pre-500)"):
-    year_range = (min_year, 500)
+    # Use the actual minimum (could be negative) for ancient
+    year_range = (int(all_years.min()), 500)
     era_selected = True
 elif col2.button("📜 Classical\n(500-1500)"):
     year_range = (500, 1500)
@@ -352,9 +357,9 @@ if not era_selected:
     st.sidebar.markdown("**Custom year range:**")
     year_range = st.sidebar.slider(
         "Select range:",
-        min_value=min_year,
+        min_value=min_year_slider,
         max_value=max_year,
-        value=(min_year, max_year)
+        value=(min_year_slider, max_year)
     )
 
 st.sidebar.markdown("---")
@@ -436,11 +441,12 @@ try:
 
         # Publication year filter
         # Only include books with unknown years if the user selects the full range
-        if year_range == (min_year, max_year):
+        if year_range == (min_year_slider, max_year):
             filtered = filtered[
                 ((filtered['original_publication_year'] >= year_range[0]) &
                  (filtered['original_publication_year'] <= year_range[1])) |
-                (pd.isna(filtered['original_publication_year']))
+                (pd.isna(filtered['original_publication_year'])) |
+                (filtered['original_publication_year'] < min_year_slider)  # include BCE if full range
             ]
         else:
             filtered = filtered[
